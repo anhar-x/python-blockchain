@@ -135,14 +135,21 @@ class Blockchain(object):
     self.chain.append(block)
     return block
 
-  def broadcast_transaction(self, transaction):
+  def broadcast_transaction(self, sender, recipient, amount):
+    transaction = {
+      "sender": sender,
+      "recipient": recipient,
+      "amount": amount,
+      "broadcast": True
+    }
     for node in self.nodes:
       response = requests.post(f'http://{node}/transactions/new', json=transaction)
       if response.status_code != 201:
         return False
     return True
+  
 
-  def new_transaction(self, sender, recipient, amount):
+  def new_transaction(self, sender, recipient, amount, broadcast=False, mining=False):
     
     """
     Creates a new transaction to go into the next mined Block
@@ -158,8 +165,11 @@ class Blockchain(object):
     }
 
     self.current_transactions.append(transaction)
-
-    self.broadcast_transaction(transaction)
+    # print(self.nodes)
+    
+    if(not mining and not broadcast): 
+      print(self.nodes)
+      self.broadcast_transaction(sender, recipient, amount)
     return self.last_block['index'] + 1
 
   @staticmethod
@@ -201,6 +211,7 @@ def mine():
     sender="0",
     recipient=node_identifier,
     amount=1,
+    mining=True
   )
 
   #forge the new Block by adding it to the chain
@@ -217,6 +228,7 @@ def mine():
 
   return jsonify(response), 200
 
+
 @app.route('/transactions/new', methods=['POST'])
 def new_transactions():
   values = request.get_json()
@@ -226,11 +238,13 @@ def new_transactions():
     return "Missing value", 400
   
   #create a new Transaction
-  index = blockchain.new_transaction(values['sender'], values['recipient'], values['amount'])
+  if ('broadcast' not in values):
+    index = blockchain.new_transaction(values['sender'], values['recipient'], values['amount'])
+  else:
+    index = blockchain.new_transaction(values['sender'], values['recipient'], values['amount'], broadcast=True)
 
   response = {'message': f'Transaction will be added to Block {index}'}
   return jsonify(response), 201
-
 
 @app.route('/chain', methods=['GET'])
 def full_chain():
