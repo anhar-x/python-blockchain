@@ -128,13 +128,19 @@ class Blockchain(object):
       "proof": proof,
       "previous_hash": previous_hash or self.hash(self.chain[-1]),
     }
-
+    
     #reset current list of transactions
     self.current_transactions = []
 
     self.chain.append(block)
     return block
 
+  def broadcast_transaction(self, transaction):
+    for node in self.nodes:
+      response = requests.post(f'http://{node}/transactions/new', json=transaction)
+      if response.status_code != 201:
+        return False
+    return True
 
   def new_transaction(self, sender, recipient, amount):
     
@@ -145,13 +151,15 @@ class Blockchain(object):
     :param amount: <int> Amount
     :return: <int> The index of the Block that will hold this transaction
     """
-
-    self.current_transactions.append({
+    transaction = {
       'sender': sender,
-      "recipient": recipient,
+      'recipient': recipient,
       'amount': amount,
-    })
+    }
 
+    self.current_transactions.append(transaction)
+
+    self.broadcast_transaction(transaction)
     return self.last_block['index'] + 1
 
   @staticmethod
@@ -277,4 +285,4 @@ def home_page():
 
 
 if __name__ == "__main__":
-  app.run(host='0.0.0.0', port=8080)
+  app.run(host='0.0.0.0', port=4000)
