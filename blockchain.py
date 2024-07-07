@@ -16,11 +16,11 @@ class Blockchain(object):
   def __init__(self):
     self.chain = []
     self.current_transactions = []
-    
+    self.pending_transactions = set() #New set to track pending transaction hashes
+
     #creates the genesis block
     self.new_block(previous_hash=1, proof=100)
     self.nodes = set()
-  
   def register_node(self, address):
     """
     Add a new node to the list of nodes
@@ -124,16 +124,18 @@ class Blockchain(object):
     block = {
       "index": len(self.chain) + 1,
       "timestamp": time(),
-      "transactions": self.current_transactions,
+      "transactions": self.current_transactions.copy(),  # Use a copy of the transactions
       "proof": proof,
       "previous_hash": previous_hash or self.hash(self.chain[-1]),
     }
-    
-    #reset current list of transactions
+        
+    # Reset current list of transactions
     self.current_transactions = []
+    self.pending_transactions.clear()
 
     self.chain.append(block)
     return block
+
 
   def broadcast_transaction(self, sender, recipient, amount):
     transaction = {
@@ -164,16 +166,19 @@ class Blockchain(object):
       'amount': amount,
     }
 
-    self.current_transactions.append(transaction)
-    # print(self.nodes)
+    transaction_hash = self.hash(transaction)
+
+    if transaction_hash not in self.pending_transactions:
+      self.current_transactions.append(transaction)
+      self.pending_transactions.add(transaction_hash)
     
-    if(not mining and not broadcast): 
-      print(self.nodes)
-      self.broadcast_transaction(sender, recipient, amount)
+      if(not mining and not broadcast): 
+        print(self.nodes)
+        self.broadcast_transaction(sender, recipient, amount)
     return self.last_block['index'] + 1
 
   @staticmethod
-  def hash(block):
+  def hash(data):
     """
     Creates a SHA-256 hash of a Block
     :param block: <dict> Block
@@ -181,8 +186,8 @@ class Blockchain(object):
     """
 
     #We must make sure that the dictionary is Ordered, or we'll have inconsistent hashes
-    block_string = json.dumps(block, sort_keys=True).encode()
-    return hashlib.sha256(block_string).hexdigest()
+    data_string = json.dumps(data, sort_keys=True).encode()
+    return hashlib.sha256(data_string).hexdigest()
 
   @property
   def last_block(self):
@@ -200,13 +205,13 @@ blockchain = Blockchain()
 
 @app.route('/mine', methods=['GET'])
 def mine():
-  #we run the proof of work algorithm to get the next proof...
+  # We run the proof of work algorithm to get the next proof...
   last_block = blockchain.last_block
   last_proof = last_block['proof']
   proof = blockchain.proof_of_work(last_proof)
 
-  #we must receive a reward for finding the proof.
-  #the sender is "0" to signify that this node has mined a new coin.
+  # We must receive a reward for finding the proof.
+  # The sender is "0" to signify that this node has mined a new coin.
   blockchain.new_transaction(
     sender="0",
     recipient=node_identifier,
@@ -214,7 +219,7 @@ def mine():
     mining=True
   )
 
-  #forge the new Block by adding it to the chain
+  # Forge the new Block by adding it to the chain
   previous_hash = blockchain.hash(last_block)
   block = blockchain.new_block(proof, previous_hash)
 
@@ -227,7 +232,6 @@ def mine():
   }
 
   return jsonify(response), 200
-
 
 @app.route('/transactions/new', methods=['POST'])
 def new_transactions():
