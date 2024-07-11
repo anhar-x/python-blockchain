@@ -303,4 +303,11 @@ def home_page():
 
 
 if __name__ == "__main__":
-  app.run(host='0.0.0.0', port=4000)
+  from argparse import ArgumentParser
+  
+  parser = ArgumentParser()
+  parser.add_argument('-p', '--port', default=4000, type=int, help='port to listen on ')
+  args = parser.parse_args()
+  port = args.port
+
+  app.run(host='127.0.0.1', port=port)
