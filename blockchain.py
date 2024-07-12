@@ -1,15 +1,22 @@
 
 import hashlib
+import binascii
 import json
 from time import time
 
 from textwrap import dedent
 from uuid import uuid4
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template
 import requests
 
 from urllib.parse import urlparse
+
+import Crypto
+from Crypto.PublicKey import RSA
+
+
+
 
 
 class Blockchain(object):
@@ -293,6 +300,20 @@ def consensus():
     }
   
   return jsonify(response), 200
+
+@app.route('/wallet/new', methods=['GET'])
+def new_wallet():
+  random_gen = Crypto.Random.new().read
+  private_key = RSA.generate(1024, random_gen)
+  public_key = private_key.public_key()
+
+  response = {
+    'private_key': binascii.hexlify(private_key.exportKey(format='DER')).decode('ascii'),
+    'public_key': binascii.hexlify(public_key.exportKey(format='DER')).decode('ascii')
+  }
+
+  return jsonify(response), 200
+
 
 @app.route('/', methods=['GET'])
 def home_page():
