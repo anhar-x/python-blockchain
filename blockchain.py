@@ -14,9 +14,10 @@ from urllib.parse import urlparse
 
 import Crypto
 from Crypto.PublicKey import RSA
+from Crypto.Signature import pkcs1_15
+from Crypto.Hash import SHA256
 
-
-
+import base64
 
 
 class Blockchain(object):
@@ -144,10 +145,10 @@ class Blockchain(object):
     return block
 
 
-  def broadcast_transaction(self, sender, recipient, amount):
+  def broadcast_transaction(self, sender_pk, recipient_pk, amount):
     transaction = {
-      "sender": sender,
-      "recipient": recipient,
+      "sender": sender_pk,
+      "recipient": recipient_pk,
       "amount": amount,
       "broadcast": True
     }
@@ -158,7 +159,7 @@ class Blockchain(object):
     return True
   
 
-  def new_transaction(self, sender, recipient, amount, broadcast=False, mining=False):
+  def new_transaction(self, sender_pk, recipient_pk, amount, broadcast=False, mining=False):
     
     """
     Creates a new transaction to go into the next mined Block
@@ -168,8 +169,8 @@ class Blockchain(object):
     :return: <int> The index of the Block that will hold this transaction
     """
     transaction = {
-      'sender': sender,
-      'recipient': recipient,
+      'sender': sender_pk,
+      'recipient': recipient_pk,
       'amount': amount,
     }
 
@@ -181,8 +182,38 @@ class Blockchain(object):
     
       if(not mining and not broadcast): 
         print(self.nodes)
-        self.broadcast_transaction(sender, recipient, amount)
+        self.broadcast_transaction(sender_pk, recipient_pk, amount)
     return self.last_block['index'] + 1
+  
+  def verify_key_pair(self, sender_sk, sender_pk):
+    try:
+      # Convert hex strings back to bytes
+      sender_sk = binascii.unhexlify(sender_sk)
+      sender_pk = binascii.unhexlify(sender_pk)
+      
+      # Import the private and public keys
+      priv_key = RSA.import_key(sender_sk)
+      pub_key = RSA.import_key(sender_pk)
+      
+      # Create a message to sign
+      message = b"Test message for key verification"
+      
+      # Create a hash of the message
+      hash_obj = SHA256.new(message)
+      
+      # Sign the hash with the private key
+      signature = pkcs1_15.new(priv_key).sign(hash_obj)
+      
+      # Verify the signature using the public key
+      pkcs1_15.new(pub_key).verify(hash_obj, signature)
+      
+      return True
+    except (ValueError, TypeError):
+      # print("not key pair")
+      return False
+
+    
+    
 
   @staticmethod
   def hash(data):
@@ -220,8 +251,8 @@ def mine():
   # We must receive a reward for finding the proof.
   # The sender is "0" to signify that this node has mined a new coin.
   blockchain.new_transaction(
-    sender="0",
-    recipient=node_identifier,
+    sender_pk="0",
+    recipient_pk=node_identifier,
     amount=1,
     mining=True
   )
@@ -244,19 +275,27 @@ def mine():
 def new_transactions():
   values = request.get_json()
 
-  required = ['sender', 'recipient', 'amount']
+  #sender_pk: sender public key
+  #sender_sk: sender private key ("sk" as in secret key)
+  #recipient_pk: recipient public key
+  required = ['sender_pk', 'sender_sk', 'recipient_pk', 'amount']
   if not all (k in values for k in required):
     return "Missing value", 400
   
-  #create a new Transaction
-  if ('broadcast' not in values):
-    index = blockchain.new_transaction(values['sender'], values['recipient'], values['amount'])
+  # print("hello there")
+  if(blockchain.verify_key_pair(values['sender_sk'], values['sender_pk'])):
+    #create a new Transaction
+    if ('broadcast' not in values):
+      index = blockchain.new_transaction(values['sender_pk'], values['recipient_pk'], values['amount'])
+    else:
+      index = blockchain.new_transaction(values['sender_pk'], values['recipient_pk'], values['amount'], broadcast=True)
+
+    response = {'message': f'Transaction will be added to Block {index}'}
+    return jsonify(response), 201
   else:
-    index = blockchain.new_transaction(values['sender'], values['recipient'], values['amount'], broadcast=True)
-
-  response = {'message': f'Transaction will be added to Block {index}'}
-  return jsonify(response), 201
-
+    response = {'Error': "Public key and Private key does not match."}
+    return jsonify(response), 400
+  
 @app.route('/chain', methods=['GET'])
 def full_chain():
   response = {
@@ -308,8 +347,8 @@ def new_wallet():
   public_key = private_key.public_key()
 
   response = {
-    'private_key': binascii.hexlify(private_key.exportKey(format='DER')).decode('ascii'),
-    'public_key': binascii.hexlify(public_key.exportKey(format='DER')).decode('ascii')
+    'private_key': binascii.hexlify(private_key.export_key(format='DER')).decode('ascii'),
+    'public_key': binascii.hexlify(public_key.export_key(format='DER')).decode('ascii')
   }
 
   return jsonify(response), 200
