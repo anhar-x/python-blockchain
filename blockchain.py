@@ -17,9 +17,6 @@ from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
 from Crypto.Hash import SHA256
 
-import base64
-
-
 class Blockchain(object):
   def __init__(self):
     self.chain = []
@@ -190,7 +187,7 @@ class Blockchain(object):
       # Convert hex strings back to bytes
       sender_sk = binascii.unhexlify(sender_sk)
       sender_pk = binascii.unhexlify(sender_pk)
-      
+
       # Import the private and public keys
       priv_key = RSA.import_key(sender_sk)
       pub_key = RSA.import_key(sender_pk)
@@ -211,9 +208,6 @@ class Blockchain(object):
     except (ValueError, TypeError):
       # print("not key pair")
       return False
-
-    
-    
 
   @staticmethod
   def hash(data):
@@ -356,9 +350,7 @@ def new_wallet():
 
 @app.route('/', methods=['GET'])
 def home_page():
-  with open('home.html', 'r') as f:
-    home_html = f.read()
-  return home_html
+  return render_template('./index.html')
 
 
 
