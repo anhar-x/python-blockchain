@@ -131,6 +131,10 @@
             data: JSON.stringify(formData),
             success: function(response) {
               alert('Success: ' + response.message);
+              $('#sender_address').val("");
+              $('#sender_private_key').val("");
+              $('#recipient_address').val("");
+              $('#amount').val("");
             },
             error: function(xhr, status, error) {
               var errorMessage = xhr.status + ': ' + xhr.statusText;
