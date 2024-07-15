@@ -351,6 +351,9 @@ def new_wallet():
 
   return jsonify(response), 200
 
+@app.route('/view/transactions', methods=['GET'])
+def view_transactions():
+  return render_template("view_transactions.html")
 
 @app.route('/', methods=['GET'])
 def home_page():
