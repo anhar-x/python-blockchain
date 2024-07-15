@@ -290,6 +290,10 @@ def new_transactions():
     response = {'Error': "Public key and Private key does not match."}
     return jsonify(response), 400
   
+@app.route('/make/transaction')
+def make_transaction():
+  return render_template('./make_transaction.html')
+
 @app.route('/chain', methods=['GET'])
 def full_chain():
   response = {
