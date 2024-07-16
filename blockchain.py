@@ -308,6 +308,13 @@ def full_chain():
 
   return jsonify(response), 200
 
+@app.route("/pending", methods=['GET'])
+def pending_transactions():
+  response = {
+    'pending': blockchain.current_transactions
+  }
+  return jsonify(response), 200
+
 @app.route('/nodes/register', methods=['POST'])
 def register_nodes():
   values = request.get_json()
