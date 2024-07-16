@@ -265,6 +265,11 @@ def mine():
 
   return jsonify(response), 200
 
+@app.route('/mine_template', methods=['GET'])
+def mine_template():
+  return render_template('./mine_template.html')
+
+
 @app.route('/transactions/new', methods=['POST'])
 def new_transactions():
   values = request.get_json()
