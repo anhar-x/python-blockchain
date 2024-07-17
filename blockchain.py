@@ -333,6 +333,10 @@ def register_nodes():
 
   return jsonify(response), 201
 
+@app.route('/configure', methods=['GET'])
+def configure():
+  return render_template("./configure.html")
+
 @app.route('/nodes/resolve', methods=['GET'])
 def consensus(): 
   replaced = blockchain.resolve_conflicts()
