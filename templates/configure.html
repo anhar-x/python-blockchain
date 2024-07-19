@@ -89,13 +89,79 @@
         </div>
 
         <div class="col-lg-12" id="list_nodes">
-
+          <ul id="node_list" class="list-group">
+            <!-- Node list will be populated here -->
+          </ul>
         </div>
-
       </div>
     </div>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
+    <script>
+    $(document).ready(function() {
+      // Function to fetch and display nodes
+      function fetchAndDisplayNodes() {
+        $.ajax({
+          url: '/nodes/get',
+          type: 'GET',
+          success: function(response) {
+            var nodeList = $('#node_list');
+            nodeList.empty(); // Clear existing list
+            
+            if (response.nodes && response.nodes.length > 0) {
+              $.each(response.nodes, function(index, node) {
+                nodeList.append('<li class="list-group-item">' + node + '</li>');
+              });
+            } else {
+              nodeList.append('<li class="list-group-item">No nodes registered yet.</li>');
+            }
+          },
+          error: function(xhr, status, error) {
+            console.error('Error fetching nodes:', error);
+            $('#node_list').html('<li class="list-group-item text-danger">Error fetching nodes. Please try again later.</li>');
+          }
+        });
+      }
+
+      // Fetch nodes when page loads
+      fetchAndDisplayNodes();
+
+      // Add node button click handler
+      $('#add_node_button').click(function(e) {
+        e.preventDefault();
+        
+        var nodeUrls = $('#nodes').val().split(',').map(function(url) {
+            return url.trim();
+        }).filter(function(url) {
+            return url !== '';
+        });
+
+        if (nodeUrls.length === 0) {
+            alert('Please enter at least one node URL.');
+            return;
+        }
+
+        $.ajax({
+            url: '/nodes/register',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ nodes: nodeUrls }),
+            success: function(response) {
+                alert('Nodes registered successfully!');
+                $('#nodes').val('');  // Clear the input field
+                console.log('Registered nodes:', response.total_nodes);
+                fetchAndDisplayNodes(); // Refresh the node list
+            },
+            error: function(xhr, status, error) {
+                console.error('Error registering nodes:', error);
+                alert('Error registering nodes. Please check the console for details.');
+            }
+        });
+      });
+
+    });
+    </script>
 
 
   </body>

@@ -330,8 +330,15 @@ def register_nodes():
     'message': 'New nodes have been added',
     'total_nodes': list(blockchain.nodes),
   }
+  print(response)
 
   return jsonify(response), 201
+
+@app.route('/nodes/get', methods=['GET'])
+def get_nodes():
+  nodes = list(blockchain.nodes)
+  response = {'nodes': nodes}
+  return jsonify(response), 200
 
 @app.route('/configure', methods=['GET'])
 def configure():
