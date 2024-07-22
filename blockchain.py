@@ -142,21 +142,25 @@ class Blockchain(object):
     return block
 
 
-  def broadcast_transaction(self, sender_pk, recipient_pk, amount):
+  def broadcast_transaction(self, sender_sk, sender_pk, recipient_pk, amount):
     transaction = {
-      "sender": sender_pk,
-      "recipient": recipient_pk,
+      "sender_sk": sender_sk,
+      "sender_pk": sender_pk,
+      "recipient_pk": recipient_pk,
       "amount": amount,
       "broadcast": True
     }
     for node in self.nodes:
       response = requests.post(f'http://{node}/transactions/new', json=transaction)
+      print(response)
+      print(f'http://{node}/transactions/new')
+      print(transaction)
       if response.status_code != 201:
         return False
     return True
   
 
-  def new_transaction(self, sender_pk, recipient_pk, amount, broadcast=False, mining=False):
+  def new_transaction(self, sender_sk, sender_pk, recipient_pk, amount, broadcast=False, mining=False):
     
     """
     Creates a new transaction to go into the next mined Block
@@ -166,8 +170,9 @@ class Blockchain(object):
     :return: <int> The index of the Block that will hold this transaction
     """
     transaction = {
-      'sender': sender_pk,
-      'recipient': recipient_pk,
+      'sender_pk': sender_pk,
+      'sender_sk': sender_sk,
+      'recipient_pk': recipient_pk,
       'amount': amount,
     }
 
@@ -179,7 +184,7 @@ class Blockchain(object):
     
       if(not mining and not broadcast): 
         print(self.nodes)
-        self.broadcast_transaction(sender_pk, recipient_pk, amount)
+        self.broadcast_transaction(sender_sk, sender_pk, recipient_pk, amount)
     return self.last_block['index'] + 1
   
   def verify_key_pair(self, sender_sk, sender_pk):
@@ -245,6 +250,7 @@ def mine():
   # We must receive a reward for finding the proof.
   # The sender is "0" to signify that this node has mined a new coin.
   blockchain.new_transaction(
+    sender_sk="00",
     sender_pk="0",
     recipient_pk=node_identifier,
     amount=1,
@@ -285,9 +291,9 @@ def new_transactions():
   if(blockchain.verify_key_pair(values['sender_sk'], values['sender_pk'])):
     #create a new Transaction
     if ('broadcast' not in values):
-      index = blockchain.new_transaction(values['sender_pk'], values['recipient_pk'], values['amount'])
+      index = blockchain.new_transaction(values['sender_sk'], values['sender_pk'], values['recipient_pk'], values['amount'])
     else:
-      index = blockchain.new_transaction(values['sender_pk'], values['recipient_pk'], values['amount'], broadcast=True)
+      index = blockchain.new_transaction(values['sender_sk'], values['sender_pk'], values['recipient_pk'], values['amount'], broadcast=True)
 
     response = {'message': f'Transaction will be added to Block {index}'}
     return jsonify(response), 201
